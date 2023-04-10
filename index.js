@@ -14,7 +14,6 @@ const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('
 for (const file of commandFiles) {
     const filePath = path.join(commandsPath, file);
     const command = require(filePath);
-    // Set a new item in the Collection with the key as the command name and the value as the exported module
     if ('data' in command && 'execute' in command) {
         client.commands.set(command.data.name, command);
     } else {
@@ -22,15 +21,28 @@ for (const file of commandFiles) {
     }
 }
 
-// When the client is ready, run this code (only once)
-// We use 'c' for the event parameter to keep it separate from the already defined 'client'
 client.once(Events.ClientReady, c => {
     console.log(`Ready! Logged in as ${c.user.tag}`);
 });
 
-// Log in to Discord with your client's token
 client.login(process.env.DISCORD_TOKEN);
 
-client.on(Events.InteractionCreate, interaction => {
+client.on(Events.InteractionCreate, async interaction => {
     console.log(interaction);
+
+    // Check if the interaction is a command
+    if (!interaction.isCommand()) return;
+
+    // Get the command from the client's commands collection
+    const command = client.commands.get(interaction.commandName);
+
+    // If the command exists, execute it
+    if (command) {
+        try {
+            await command.execute(interaction);
+        } catch (error) {
+            console.error(error);
+            await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+        }
+    }
 });
